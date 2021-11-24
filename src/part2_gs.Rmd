@@ -1,0 +1,110 @@
+---
+title: "Lab 9 Notes: Chi-Squared"
+author: "German Silva"
+date: "11/24/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Attach packages
+
+library(tidyverse)
+library(here)
+library(janitor)
+library(broom)
+
+```
+
+
+## Read in the data
+
+```{r}
+lizards <- read_csv(here("data", "lizards.csv"))
+```
+
+getting counts of lizards by species
+
+```{r}
+lizards %>% 
+  count(spp) %>% 
+  arrange(-n)
+```
+
+## Make a subset
+
+- UTST lizards
+- Sites: IBPE (enclousure grassland), RABB (rabbit mesquiresite), "EAST" (east tarbush site)
+- Tail condition is recorded (W = whole, B = broken)
+
+```{r}
+utst <- lizards %>% 
+  filter(spp == "UTST") %>% 
+  filter(site %in% c("IBPE", "RABB", "EAST")) %>% 
+  filter(tail != "NA")
+```
+
+## Find counts and proportions of lizards with broken or whole tails at each site
+
+```{r}
+utst %>% 
+  count(site, tail)
+# this looks fine but it doesn't look like a true constingency table
+```
+
+```{r}
+tail_counts <- utst %>% 
+  janitor::tabyl(site, tail) # much better for chi-squared and communication but not for data analysis
+
+
+tail_proportions <- tail_counts %>% 
+  janitor::adorn_percentages() %>% 
+  janitor::adorn_pct_formatting(digits = 2) %>% 
+  janitor::adorn_ns()
+
+```
+
+
+## Convert column to row names to create contingency table
+
+```{r}
+lizard_ct <- tail_counts %>% 
+  column_to_rownames(var = "site")
+```
+
+## Chi Squared
+
+- Are tail breakage and site associated (independent)?
+- Are these proportions so different do we have enough evidence to reject the H~o~ that there these variables are independent?
+
+```{r}
+lizard_x2 <- chisq.test(lizard_ct)
+lizard_x2
+
+# there is a significant association between site and tail breakage
+
+lizard_tidy <- broom::tidy(lizard_x2)
+
+```
+
+There is a significant association (i.e. non-independence) between site and lizard tail breakage ($\chi$^2^(`r lizard_tidy$parameter`)= `r lizard_tidy$statistic`, *p* = `r lizard_tidy$p.value`).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
